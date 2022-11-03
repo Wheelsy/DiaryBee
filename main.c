@@ -75,7 +75,7 @@ int login(char name[], char pw[])
     if (file == NULL)
     {
         perror("file can't be opened \n");
-        //exit(0);
+        // exit(0);
     }
     else
     {
@@ -156,10 +156,23 @@ int validateMenuSelection(char selection[], int num, int numSelections)
 
 void createEntry(void)
 {
-    char entry[100];
+#define CHUNK 200
+    char tmpBuf[CHUNK];
+    char *input = NULL;
+    size_t inputlen = 0, templen = 0;
     printf("%s\n", "Enter Diary Entry Below:");
-    fgets(entry, 99, stdin);
-    writeDiaryEntryToFile(entry);
+
+    do
+    {
+        fgets(tmpBuf, CHUNK, stdin);
+        templen = strlen(tmpBuf);
+        input = realloc(input, inputlen + templen + 1);
+        strcpy(input + inputlen, tmpBuf);
+        inputlen += templen;
+    } while (templen == CHUNK - 1 && tmpBuf[CHUNK - 2] != '\n');
+
+    writeDiaryEntryToFile(input);
+    free(input);
 }
 
 void mainMenu(char name[])
@@ -269,4 +282,5 @@ int main(int argc, char *argv[])
     printf("%s\n", "        `\\__)   '. . ' ' .  . ");
     printf("\n");
     accountMenu();
+    return 0;
 }
