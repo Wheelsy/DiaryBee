@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <dirent.h>
 
 void mainMenu(char[]);
 void accountMenu();
@@ -11,9 +12,61 @@ int checkUserExists(void);
 void writeUserToFile(char[], char[]);
 void writeDiaryEntryToFile(char[]);
 void createEntry(void);
+void getArrayOfFileNames(void);
+int getNumEntries(void);
 
 char *userDir = "user.txt";
 char *userName;
+DIR *dir;
+struct dirent *ent;
+
+void getArrayOfFileNames(void)
+{
+    int numFiles = getNumEntries();
+    if ((dir = opendir("entries/")) != NULL)
+    {
+        char **files = (char **)calloc(numFiles, sizeof(char *));
+        int k = 0;
+        while ((ent = readdir(dir)) != NULL)
+        {
+            if (strcmp(".", ent->d_name) != 0 && strcmp("..", ent->d_name))
+            {
+                files[k] = (char *)calloc(strlen(ent->d_name), sizeof(char *));
+                strcpy(files[k], ent->d_name);
+                printf("%d%s%s\n", k, ": ", files[k]);
+                k++;
+            }
+        }
+        for (int j = 0; j < numFiles; j++)
+        {
+            free(files[j]);
+        }
+        free(files);
+        closedir(dir);
+    }
+    else
+    {
+        perror("");
+        // return EXIT_FAILURE;
+    }
+}
+
+int getNumEntries(void)
+{
+    int numFiles = 0;
+    if ((dir = opendir("entries/")) != NULL)
+    {
+        while ((ent = readdir(dir)) != NULL)
+        {
+            if (strcmp(".", ent->d_name) != 0 && strcmp("..", ent->d_name))
+            {
+                numFiles++;
+            }
+        }
+    }
+    closedir(dir);
+    return numFiles;
+}
 
 void writeUserToFile(char name[], char pw[])
 {
@@ -64,6 +117,32 @@ void writeDiaryEntryToFile(char entry[])
         fclose(file2);
         mainMenu(userName);
     }
+}
+
+void createEntry(void)
+{
+#define CHUNK 200
+    char tempBuf[CHUNK];
+    char *input = NULL;
+    size_t inputlen = 0, templen;
+    printf("%s\n", "Enter Diary Entry Below:");
+    do
+    {
+        templen = 0;
+        fgets(tempBuf, CHUNK, stdin);                   // get user entry into tmpBuf
+        templen = strlen(tempBuf);                      // get length of tmpBuf
+        input = realloc(input, inputlen + templen + 1); // set input size to that of the temp input array
+        if (input == NULL)
+        {
+            printf("Error reading input please exit and restart Diary Bee");
+            free(input);
+            mainMenu(userName);
+        }
+        strcpy(input + inputlen, tempBuf);                        // concat the input string
+        inputlen += templen;                                      // get the full input length
+    } while (templen == CHUNK - 1 && tempBuf[CHUNK - 2] != '\n'); // if we reach the end of the available string space loop back
+    writeDiaryEntryToFile(input);
+    free(input);
 }
 
 int login(char name[], char pw[])
@@ -154,27 +233,6 @@ int validateMenuSelection(char selection[], int num, int numSelections)
     return num;
 }
 
-void createEntry(void)
-{
-#define CHUNK 200
-    char tmpBuf[CHUNK];
-    char *input = NULL;
-    size_t inputlen = 0, templen = 0;
-    printf("%s\n", "Enter Diary Entry Below:");
-
-    do
-    {
-        fgets(tmpBuf, CHUNK, stdin);
-        templen = strlen(tmpBuf);
-        input = realloc(input, inputlen + templen + 1);
-        strcpy(input + inputlen, tmpBuf);
-        inputlen += templen;
-    } while (templen == CHUNK - 1 && tmpBuf[CHUNK - 2] != '\n');
-
-    writeDiaryEntryToFile(input);
-    free(input);
-}
-
 void mainMenu(char name[])
 {
     char selection[64];
@@ -195,7 +253,10 @@ void mainMenu(char name[])
     switch (num)
     {
     case 1:
-        printf("Diary Entries");
+        char entryToRead[64];
+        printf("%s\n", "Select Diary Entry;");
+        getArrayOfFileNames();
+        fgets(entryToRead, 63, stdin);
         break;
 
     case 2:
@@ -278,7 +339,7 @@ int main(int argc, char *argv[])
     printf("\n");
     printf("%s\n", "           __         .' '.");
     printf("%s\n", "        _//__)        .   .       .");
-    printf("%s\n", "       (8|)_}}- .      .        .");
+    printf("%s\n", "       (8|)_}}-..      .        .");
     printf("%s\n", "        `\\__)   '. . ' ' .  . ");
     printf("\n");
     accountMenu();
